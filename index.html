@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ConsórcioCalc Pro — Ferramentas para Consultores</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;600;700;900&family=Open+Sans:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #050505;
+      --bg2: #0f0f0f;
+      --bg3: #1a1a1a;
+      --gold: #e9a236;
+      --white: #ffffff;
+      --gray: #888;
+    }
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: 'Open Sans', sans-serif;
+      min-height: 100vh;
+    }
+    h1, h2, h3, h4 { font-family: 'League Spartan', sans-serif; text-transform: uppercase; }
+
+    /* NAV */
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 40px;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    .logo { font-family: 'League Spartan', sans-serif; font-size: 22px; font-weight: 900; color: var(--gold); letter-spacing: -0.5px; }
+    .logo span { color: var(--white); }
+    .nav-btn {
+      background: none; border: 1px solid #333; color: #888;
+      padding: 10px 20px; border-radius: 8px; cursor: pointer;
+      font-family: 'Open Sans', sans-serif; font-size: 14px; transition: all 0.2s;
+    }
+    .nav-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* HERO */
+    .hero {
+      text-align: center;
+      padding: 80px 40px 60px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .hero-tag {
+      display: inline-block;
+      background: #1a1100;
+      border: 1px solid #3d2800;
+      color: var(--gold);
+      font-size: 12px;
+      letter-spacing: 2px;
+      padding: 6px 16px;
+      border-radius: 100px;
+      margin-bottom: 24px;
+      font-weight: 600;
+    }
+    .hero h1 {
+      font-size: clamp(36px, 6vw, 60px);
+      font-weight: 900;
+      line-height: 1.05;
+      margin-bottom: 16px;
+      letter-spacing: -1px;
+    }
+    .hero h1 .gold { color: var(--gold); }
+    .hero p {
+      font-size: 18px;
+      color: var(--gray);
+      font-style: italic;
+      line-height: 1.6;
+      margin-bottom: 40px;
+    }
+    .cta-btn {
+      background: var(--gold);
+      color: #000;
+      border: none;
+      padding: 16px 36px;
+      border-radius: 10px;
+      font-family: 'League Spartan', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .cta-btn:hover { background: #f0b040; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(233,162,54,0.3); }
+
+    /* FEATURES */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      max-width: 1000px;
+      margin: 60px auto;
+      padding: 0 40px;
+    }
+    .feature-card {
+      background: var(--bg2);
+      border: 1px solid #1e1e1e;
+      border-radius: 12px;
+      padding: 28px;
+    }
+    .feature-icon { font-size: 28px; margin-bottom: 14px; }
+    .feature-card h3 { font-size: 14px; margin-bottom: 8px; letter-spacing: 0.5px; }
+    .feature-card p { font-size: 13px; color: var(--gray); font-style: italic; line-height: 1.6; }
+
+    /* PRICING */
+    .pricing {
+      max-width: 400px;
+      margin: 0 auto 80px;
+      padding: 0 40px;
+      text-align: center;
+    }
+    .pricing h2 { font-size: 28px; margin-bottom: 24px; }
+    .price-card {
+      background: var(--bg2);
+      border: 1px solid #e9a23633;
+      border-radius: 16px;
+      padding: 36px;
+    }
+    .price-amount {
+      font-family: 'League Spartan', sans-serif;
+      font-size: 52px;
+      font-weight: 900;
+      color: var(--gold);
+      line-height: 1;
+    }
+    .price-period { font-size: 16px; color: var(--gray); margin-bottom: 24px; font-style: italic; }
+    .price-features { list-style: none; margin-bottom: 28px; }
+    .price-features li {
+      padding: 10px 0;
+      border-bottom: 1px solid #1e1e1e;
+      font-size: 14px;
+      color: #ccc;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .price-features li:last-child { border-bottom: none; }
+    .check { color: #4ade80; font-size: 16px; }
+
+    /* AUTH MODAL */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: #0f0f0f;
+      border: 1px solid #2a2a2a;
+      border-radius: 16px;
+      padding: 40px;
+      width: 100%;
+      max-width: 400px;
+      position: relative;
+    }
+    .modal-close {
+      position: absolute;
+      top: 16px; right: 20px;
+      background: none; border: none;
+      color: #555; font-size: 24px;
+      cursor: pointer; line-height: 1;
+    }
+    .modal h2 { font-size: 22px; margin-bottom: 6px; }
+    .modal p { font-size: 13px; color: var(--gray); font-style: italic; margin-bottom: 28px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 11px; letter-spacing: 1px; color: var(--gray); margin-bottom: 8px; }
+    .form-group input {
+      width: 100%;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      padding: 14px 16px;
+      color: var(--white);
+      font-size: 15px;
+      font-family: 'Open Sans', sans-serif;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus { border-color: var(--gold); }
+    .submit-btn {
+      width: 100%;
+      background: var(--gold);
+      color: #000;
+      border: none;
+      padding: 14px;
+      border-radius: 8px;
+      font-family: 'League Spartan', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      text-transform: uppercase;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.2s;
+    }
+    .submit-btn:hover { background: #f0b040; }
+    .submit-btn:disabled { background: #555; cursor: not-allowed; }
+    .toggle-auth { margin-top: 20px; text-align: center; font-size: 13px; color: var(--gray); }
+    .toggle-auth a { color: var(--gold); cursor: pointer; text-decoration: none; }
+    .error-msg { background: #2b0000; border: 1px solid #7f1d1d; color: #f87171; padding: 10px 14px; border-radius: 6px; font-size: 13px; margin-bottom: 16px; display: none; }
+    .success-msg { background: #0d2b1a; border: 1px solid #166534; color: #4ade80; padding: 10px 14px; border-radius: 6px; font-size: 13px; margin-bottom: 16px; display: none; }
+    .tab-switcher { display: flex; gap: 4px; background: #1a1a1a; border-radius: 8px; padding: 4px; margin-bottom: 24px; }
+    .tab-sw-btn {
+      flex: 1; padding: 10px; background: none; border: none;
+      color: #888; cursor: pointer; border-radius: 6px;
+      font-family: 'League Spartan', sans-serif; font-size: 13px;
+      font-weight: 600; text-transform: uppercase; transition: all 0.2s;
+    }
+    .tab-sw-btn.active { background: var(--gold); color: #000; }
+
+    @media (max-width: 700px) {
+      .features { grid-template-columns: 1fr; padding: 0 20px; }
+      .hero { padding: 60px 20px 40px; }
+      nav { padding: 16px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="logo">Consórcio<span>Calc Pro</span></div>
+    <button class="nav-btn" onclick="openModal('login')">Entrar</button>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-tag">Ferramenta para Consultores de Consórcio</div>
+    <h1>Simule. Compare.<br><span class="gold">Feche Mais.</span></h1>
+    <p>Duas calculadoras profissionais que mostram ao cliente, com números, por que o consórcio é a escolha inteligente.</p>
+    <button class="cta-btn" onclick="openModal('register')">Assinar por R$ 12,90/mês</button>
+  </div>
+
+  <div class="features">
+    <div class="feature-card">
+      <div class="feature-icon">📊</div>
+      <h3>Consórcio vs Financiamento</h3>
+      <p>Compare parcelas e total pago contra Price e SAC em segundos. Mostre a economia de até 70% no consórcio.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📈</div>
+      <h3>Simulador de Investimento</h3>
+      <p>Calcule rentabilidade com correção INCC e Tesouro Selic. Diagnóstico automático de alta rentabilidade.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <h3>Pronto para usar</h3>
+      <p>Interface profissional, resultados em tempo real. Sem planilha, sem cálculo manual. Só ajustar os sliders.</p>
+    </div>
+  </div>
+
+  <div class="pricing">
+    <h2>Simples assim</h2>
+    <div class="price-card">
+      <div class="price-amount">R$ 12,90</div>
+      <div class="price-period">por mês · cancele quando quiser</div>
+      <ul class="price-features">
+        <li><span class="check">✓</span> Calculadora Consórcio vs Financiamento</li>
+        <li><span class="check">✓</span> Simulador de Investimento com INCC + Selic</li>
+        <li><span class="check">✓</span> Gráficos interativos e resultados em tempo real</li>
+        <li><span class="check">✓</span> Acesso imediato após pagamento</li>
+      </ul>
+      <button class="cta-btn" style="width:100%;" onclick="openModal('register')">Começar agora</button>
+    </div>
+  </div>
+
+  <!-- AUTH MODAL -->
+  <div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal()">×</button>
+
+      <div class="tab-switcher">
+        <button class="tab-sw-btn active" id="tab-login-btn" onclick="switchAuthTab('login')">Entrar</button>
+        <button class="tab-sw-btn" id="tab-register-btn" onclick="switchAuthTab('register')">Criar conta</button>
+      </div>
+
+      <div id="error-msg" class="error-msg"></div>
+      <div id="success-msg" class="success-msg"></div>
+
+      <!-- LOGIN -->
+      <div id="form-login">
+        <h2>Bem-vindo de volta</h2>
+        <p>Entre com seu email e senha para acessar as calculadoras.</p>
+        <div class="form-group">
+          <label>EMAIL</label>
+          <input type="email" id="login-email" placeholder="seu@email.com" onkeydown="enterSubmit(event,'doLogin')">
+        </div>
+        <div class="form-group">
+          <label>SENHA</label>
+          <input type="password" id="login-password" placeholder="••••••••" onkeydown="enterSubmit(event,'doLogin')">
+        </div>
+        <button class="submit-btn" id="btn-login" onclick="doLogin()">Entrar</button>
+      </div>
+
+      <!-- REGISTER -->
+      <div id="form-register" style="display:none;">
+        <h2>Criar conta</h2>
+        <p>Após criar a conta, você receberá o acesso por email.</p>
+        <div class="form-group">
+          <label>SEU NOME</label>
+          <input type="text" id="reg-name" placeholder="Maurício Augusto">
+        </div>
+        <div class="form-group">
+          <label>EMAIL</label>
+          <input type="email" id="reg-email" placeholder="seu@email.com">
+        </div>
+        <div class="form-group">
+          <label>SENHA</label>
+          <input type="password" id="reg-password" placeholder="mínimo 6 caracteres" onkeydown="enterSubmit(event,'doRegister')">
+        </div>
+        <button class="submit-btn" id="btn-register" onclick="doRegister()">Criar conta</button>
+        <div class="toggle-auth">Já tem conta? <a onclick="switchAuthTab('login')">Entrar</a></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── SUPABASE CONFIG ──────────────────────────────────────────────
+    // PREENCHA com seus dados do Supabase (ver instruções de deploy)
+    const SUPABASE_URL = 'https://oomyirwisvbwldqiwjvj.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_IOeM9M68uVu0pdWSTAUr1A_ugn3M2hC';
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Se já logado, vai direto pro app
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (session) window.location.href = 'app.html';
+    });
+
+    // ── MODAL ────────────────────────────────────────────────────────
+    function openModal(tab) {
+      document.getElementById('modal-overlay').classList.add('active');
+      switchAuthTab(tab);
+    }
+    function closeModal() {
+      document.getElementById('modal-overlay').classList.remove('active');
+      clearMessages();
+    }
+    function closeModalOutside(e) {
+      if (e.target === document.getElementById('modal-overlay')) closeModal();
+    }
+    function switchAuthTab(tab) {
+      document.getElementById('form-login').style.display = tab === 'login' ? 'block' : 'none';
+      document.getElementById('form-register').style.display = tab === 'register' ? 'block' : 'none';
+      document.getElementById('tab-login-btn').classList.toggle('active', tab === 'login');
+      document.getElementById('tab-register-btn').classList.toggle('active', tab === 'register');
+      clearMessages();
+    }
+    function showError(msg) {
+      const el = document.getElementById('error-msg');
+      el.textContent = msg; el.style.display = 'block';
+      document.getElementById('success-msg').style.display = 'none';
+    }
+    function showSuccess(msg) {
+      const el = document.getElementById('success-msg');
+      el.textContent = msg; el.style.display = 'block';
+      document.getElementById('error-msg').style.display = 'none';
+    }
+    function clearMessages() {
+      document.getElementById('error-msg').style.display = 'none';
+      document.getElementById('success-msg').style.display = 'none';
+    }
+    function enterSubmit(e, fn) { if (e.key === 'Enter') window[fn](); }
+
+    // ── AUTH ─────────────────────────────────────────────────────────
+    async function doLogin() {
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      if (!email || !password) return showError('Preencha email e senha.');
+      const btn = document.getElementById('btn-login');
+      btn.disabled = true; btn.textContent = 'Entrando...';
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) {
+        showError('Email ou senha incorretos.');
+        btn.disabled = false; btn.textContent = 'Entrar';
+      } else {
+        window.location.href = 'app.html';
+      }
+    }
+
+    async function doRegister() {
+      const name = document.getElementById('reg-name').value.trim();
+      const email = document.getElementById('reg-email').value.trim();
+      const password = document.getElementById('reg-password').value;
+      if (!name || !email || !password) return showError('Preencha todos os campos.');
+      if (password.length < 6) return showError('Senha deve ter ao menos 6 caracteres.');
+      const btn = document.getElementById('btn-register');
+      btn.disabled = true; btn.textContent = 'Criando conta...';
+      const { error } = await sb.auth.signUp({ email, password, options: { data: { full_name: name } } });
+      if (error) {
+        showError(error.message);
+        btn.disabled = false; btn.textContent = 'Criar conta';
+      } else {
+        showSuccess('Conta criada! Verifique seu email para confirmar o cadastro.');
+        btn.disabled = false; btn.textContent = 'Criar conta';
+      }
+    }
+  </script>
+</body>
+</html>

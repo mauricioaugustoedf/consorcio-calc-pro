@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ConsórcioCalc Pro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;600;700;900&family=Open+Sans:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:   #050505;
+      --bg2:  #0f0f0f;
+      --bg3:  #181818;
+      --gold: #e9a236;
+      --red:  #D63B2F;
+      --white:#ffffff;
+      --gray: #888888;
+    }
+    body { background: var(--bg); color: var(--white); font-family: 'Open Sans', sans-serif; min-height: 100vh; }
+    h1,h2,h3,h4 { font-family: 'League Spartan', sans-serif; text-transform: uppercase; }
+
+    /* HEADER */
+    header {
+      background: #0a0a0a;
+      border-bottom: 1px solid #1e1e1e;
+      padding: 14px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky; top: 0; z-index: 50;
+    }
+    .logo { font-family: 'League Spartan', sans-serif; font-size: 20px; font-weight: 900; color: var(--gold); }
+    .logo span { color: var(--white); }
+    .header-right { display: flex; align-items: center; gap: 16px; }
+    #user-email { font-size: 12px; color: #555; }
+    .logout-btn {
+      background: none; border: 1px solid #2a2a2a; color: #666;
+      padding: 7px 16px; border-radius: 6px; cursor: pointer;
+      font-family: 'Open Sans', sans-serif; font-size: 12px; transition: all 0.2s;
+    }
+    .logout-btn:hover { border-color: #444; color: #aaa; }
+
+    /* TABS */
+    .tabs {
+      display: flex;
+      gap: 0;
+      background: #0a0a0a;
+      border-bottom: 1px solid #1e1e1e;
+      padding: 0 28px;
+    }
+    .tab-btn {
+      font-family: 'League Spartan', sans-serif;
+      font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;
+      padding: 14px 22px;
+      background: none; border: none; color: var(--gray);
+      cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s;
+    }
+    .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+    .tab-btn:hover:not(.active) { color: #ccc; }
+
+    /* LAYOUT */
+    .page { display: none; }
+    .page.active { display: block; }
+    .container { padding: 24px 28px; max-width: 1300px; margin: 0 auto; }
+
+    /* GRID 2x2 */
+    .calc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    /* CARDS */
+    .card {
+      background: var(--bg2);
+      border: 1px solid #1e1e1e;
+      border-radius: 14px;
+      padding: 24px;
+    }
+    .card-title {
+      font-size: 14px; font-weight: 700; letter-spacing: 0.3px;
+      margin-bottom: 4px; display: flex; align-items: center; gap: 8px;
+    }
+    .badge {
+      font-size: 10px; padding: 3px 10px; border-radius: 100px;
+      font-weight: 600; text-transform: none; letter-spacing: 0;
+    }
+    .badge-green { background: #0d2b1a; color: #4ade80; border: 1px solid #166534; }
+    .card-sub { font-size: 12px; color: var(--gray); font-style: italic; margin-bottom: 22px; line-height: 1.5; }
+
+    /* SLIDERS */
+    .slider-row { margin-bottom: 18px; }
+    .slider-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 10px;
+    }
+    .slider-name { font-size: 11px; color: var(--gray); letter-spacing: 1px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+    .slider-value { font-family: 'League Spartan', sans-serif; font-size: 20px; font-weight: 700; color: var(--gold); }
+    input[type="range"] {
+      width: 100%; height: 4px; background: #2a2a2a;
+      border-radius: 2px; outline: none; appearance: none; cursor: pointer;
+      margin-bottom: 6px;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none; width: 18px; height: 18px; border-radius: 50%;
+      background: var(--gold); cursor: pointer; box-shadow: 0 0 8px rgba(233,162,54,.35);
+    }
+    .slider-range { display: flex; justify-content: space-between; font-size: 10px; color: #444; }
+
+    /* CALCULATED FIELD */
+    .calc-field {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 13px 0; border-top: 1px solid #1e1e1e; margin-top: 4px;
+    }
+    .calc-field .cf-name { font-size: 11px; color: var(--gray); letter-spacing: 1px; display: flex; align-items: center; gap: 6px; }
+    .calc-field .cf-value { font-family: 'League Spartan', sans-serif; font-size: 20px; font-weight: 700; color: var(--gold); }
+
+    /* SUMMARY */
+    .sum-line {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 0; border-bottom: 1px solid #151515; font-size: 14px;
+    }
+    .sum-line .sl-label { color: var(--gray); }
+    .sum-line .sl-value { font-weight: 600; }
+    .sum-total .sl-label { font-family: 'League Spartan', sans-serif; font-size: 14px; font-weight: 700; color: var(--white); }
+    .sum-total .sl-value { font-family: 'League Spartan', sans-serif; font-size: 24px; color: var(--gold); }
+    .footnote { font-size: 11px; color: #444; font-style: italic; line-height: 1.5; margin-top: 12px; }
+
+    /* SAVINGS */
+    .savings-section { margin-top: 20px; }
+    .sav-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+    .sav-sub { font-size: 11px; color: var(--gray); font-style: italic; margin-bottom: 14px; }
+    .sav-item { padding: 12px 0; border-bottom: 1px solid #151515; }
+    .sav-item:last-child { border-bottom: none; }
+    .sav-vs { font-size: 11px; color: var(--gray); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+    .sav-amount { font-family: 'League Spartan', sans-serif; font-size: 22px; font-weight: 700; color: var(--gold); }
+    .sav-pct { font-size: 12px; color: #4ade80; margin-left: 8px; }
+
+    /* CHART */
+    .chart-wrap { position: relative; height: 190px; }
+
+    /* ── CALCULADORA 2 ── */
+    .input-grid-4 {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 14px; margin-bottom: 18px;
+    }
+    .ig-1 { grid-template-columns: 1fr; max-width: 220px; margin-bottom: 18px; }
+    .inp-group { display: flex; flex-direction: column; gap: 6px; }
+    .inp-group label {
+      font-size: 10px; color: var(--gray); letter-spacing: 1px; font-weight: 600; line-height: 1.4;
+    }
+    .inp-group .manual { font-size: 10px; color: var(--gold); font-style: italic; display: block; }
+    .inp-group input {
+      background: #181818; border: 1px solid #2a2a2a; border-radius: 8px;
+      padding: 12px 14px; color: var(--white); font-size: 16px;
+      font-family: 'League Spartan', sans-serif; font-weight: 600;
+      outline: none; transition: border-color 0.2s; width: 100%;
+    }
+    .inp-group input:focus { border-color: var(--gold); }
+
+    /* TIMELINE */
+    .tl-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .tl-label { font-size: 11px; color: var(--gray); letter-spacing: 1px; font-weight: 600; }
+    .tl-markers { display: flex; gap: 20px; font-size: 12px; }
+    .tl-mark-gold { color: var(--gold); }
+    .tl-mark-blue { color: #60a5fa; }
+    .tl-scale {
+      display: flex; justify-content: space-between;
+      font-size: 9px; color: #333; margin-top: 4px; margin-bottom: 16px;
+    }
+
+    /* METRICS */
+    .metrics-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 10px; margin-top: 18px;
+    }
+    .metric {
+      background: var(--bg3); border-radius: 8px; padding: 14px 16px;
+    }
+    .metric-label { font-size: 10px; color: var(--gray); letter-spacing: 1px; margin-bottom: 6px; font-weight: 600; }
+    .metric-value { font-family: 'League Spartan', sans-serif; font-size: 17px; font-weight: 700; }
+
+    /* DIAGNOSTICO */
+    .diagnostico {
+      display: flex; align-items: center; gap: 14px;
+      padding: 16px 20px; border-radius: 10px;
+      margin-top: 16px; border: 1px solid;
+    }
+    .diag-icon { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+    .diag-label { font-size: 10px; color: var(--gray); letter-spacing: 1.5px; font-weight: 600; margin-bottom: 2px; }
+    .diag-value { font-family: 'League Spartan', sans-serif; font-size: 18px; font-weight: 900; }
+
+    /* LEGEND */
+    .legend { display: flex; gap: 20px; font-size: 12px; color: #555; margin: 8px 0 16px; flex-wrap: wrap; }
+    .legend span { display: flex; align-items: center; gap: 6px; }
+
+    /* RESPONSIVE */
+    @media (max-width: 900px) {
+      .calc-grid { grid-template-columns: 1fr; }
+      .input-grid-4 { grid-template-columns: 1fr 1fr; }
+      .metrics-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 500px) {
+      .container { padding: 16px; }
+      .input-grid-4 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Consórcio<span>Calc Pro</span></div>
+  <div class="header-right">
+    <span id="user-email"></span>
+    <button class="logout-btn" onclick="logout()">Sair</button>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab(1, this)">📊 Consórcio vs Financiamento</button>
+  <button class="tab-btn" onclick="showTab(2, this)">📈 Simulador de Investimento</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     TAB 1 — Consórcio vs Financiamento
+═══════════════════════════════════════════════ -->
+<div id="tab1" class="page active">
+  <div class="container">
+    <div class="calc-grid">
+
+      <!-- Card A: Config -->
+      <div class="card">
+        <div class="card-title">⚙ Configuração de plano</div>
+        <div class="card-sub">Ajuste os valores para calcular automaticamente</div>
+
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-name">💳 VALOR DO CRÉDITO</span>
+            <span class="slider-value" id="lb1-credito">R$ 500.000</span>
+          </div>
+          <input type="range" id="sl1-credito" min="200000" max="2000000" step="10000" value="500000" oninput="calc1()">
+          <div class="slider-range"><span>R$ 200.000</span><span>R$ 2.000.000</span></div>
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-name">📅 PARCELA MENSAL</span>
+            <span class="slider-value" id="lb1-parcela">R$ 6.200</span>
+          </div>
+          <input type="range" id="sl1-parcela" min="300" max="10000" step="50" value="6200" oninput="calc1()">
+          <div class="slider-range"><span>R$ 300</span><span>R$ 10.000</span></div>
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-name">⏱ PRAZO</span>
+            <span class="slider-value" id="lb1-prazo">97 meses</span>
+          </div>
+          <input type="range" id="sl1-prazo" min="60" max="240" step="1" value="97" oninput="calc1()">
+          <div class="slider-range"><span>60 meses</span><span>240 meses</span></div>
+        </div>
+
+        <div class="calc-field">
+          <span class="cf-name">🏠 TAXA ADMINISTRATIVA</span>
+          <span class="cf-value" id="lb1-taxa">24,2%</span>
+        </div>
+      </div>
+
+      <!-- Card B: Parcela mensal comparativo -->
+      <div class="card">
+        <div class="card-title">Comparativo de parcela mensal</div>
+        <div class="card-sub" id="sub1-monthly">Para os mesmos R$ 500.000 de crédito em 97 meses de prazo.</div>
+        <div class="chart-wrap"><canvas id="chart1-monthly"></canvas></div>
+        <p class="footnote">No SAC mostramos a diferença da 1ª para a <u>última</u> parcela, que cai mês a mês.</p>
+      </div>
+
+      <!-- Card C: Resumo -->
+      <div class="card">
+        <div class="card-title">
+          📋 Resumo do Consórcio
+          <span class="badge badge-green">consórcio</span>
+        </div>
+        <div class="card-sub">Total a pagar: crédito + taxa de administração e fundo reserva.</div>
+
+        <div class="sum-line">
+          <span class="sl-label">Valor do crédito</span>
+          <span class="sl-value" id="sum1-credito">R$ 500.000</span>
+        </div>
+        <div class="sum-line">
+          <span class="sl-label">Taxas embutidas ℹ</span>
+          <span class="sl-value" id="sum1-taxas" style="color:#4ade80;">+R$ 131.000</span>
+        </div>
+        <div class="sum-line sum-total">
+          <span class="sl-label">Total a pagar</span>
+          <span class="sl-value" id="sum1-total">R$ 631.000</span>
+        </div>
+
+        <p class="footnote">* Não considera o reajuste anual da carta pelo INCC (~6,5% a.a.), aplicado pelo administrador ao saldo devedor a cada aniversário do plano.</p>
+
+        <div class="savings-section">
+          <div class="sav-title">🏆 Consórcio vs Financiamento</div>
+          <div class="sav-sub">Economia ao final de cada operação.</div>
+
+          <div class="sav-item">
+            <div class="sav-vs"><span class="dot" style="background:#eab308;"></span> vs Price</div>
+            <span class="sav-amount" id="sav1-price">R$ 1.501.655</span>
+            <span class="sav-pct" id="sav1-price-pct">economia de 70,4% no consórcio</span>
+          </div>
+          <div class="sav-item">
+            <div class="sav-vs"><span class="dot" style="background:#f87171;"></span> vs SAC</div>
+            <span class="sav-amount" id="sav1-sac">R$ 921.500</span>
+            <span class="sav-pct" id="sav1-sac-pct">economia de 59,4% no consórcio</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card D: Total comparativo -->
+      <div class="card">
+        <div class="card-title">Quanto você paga no total</div>
+        <div class="card-sub" id="sub1-total">Comparativo do valor total pago para os mesmos R$ 500.000 de crédito. Price e SAC travados em 420 meses.</div>
+        <div class="chart-wrap"><canvas id="chart1-total"></canvas></div>
+        <p class="footnote">Price e SAC calculados com prazo fixo de 420 meses e taxa de juros de 12% a.a. (1% a.m.).</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     TAB 2 — Simulador de Investimento
+═══════════════════════════════════════════════ -->
+<div id="tab2" class="page">
+  <div class="container">
+    <div style="display:flex;justify-content:flex-end;font-size:11px;color:#444;margin-bottom:10px;gap:16px;">
+      <span>@mauricioaugustosb</span><span>13 98807-0696</span>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="font-size:22px;letter-spacing:-0.5px;margin-bottom:4px;">Simulador de Consórcio</div>
+      <div class="card-sub" style="margin-bottom:24px;">Correção INCC anual · Tesouro Selic pós-contemplação</div>
+
+      <!-- Inputs 4 colunas -->
+      <div class="input-grid-4">
+        <div class="inp-group">
+          <label>CRÉDITO (R$)</label>
+          <input type="number" id="in2-credito" value="100000" oninput="calc2()">
+        </div>
+        <div class="inp-group">
+          <label>PARCELA INICIAL (R$)</label>
+          <input type="number" id="in2-parcela" value="567.10" step="0.01" oninput="calc2()">
+        </div>
+        <div class="inp-group">
+          <label>INCC HISTÓRICO A.A. (%) <span class="manual">manual</span></label>
+          <input type="number" id="in2-incc" value="4.90" step="0.01" oninput="calc2()">
+        </div>
+        <div class="inp-group">
+          <label>TESOURO SELIC A.M. (%) <span class="manual">manual</span></label>
+          <input type="number" id="in2-selic" value="0.83" step="0.01" oninput="calc2()">
+        </div>
+      </div>
+
+      <!-- Venda da carta -->
+      <div class="inp-group ig-1">
+        <label>VENDA DA CARTA (%)</label>
+        <input type="number" id="in2-venda" value="35" step="1" oninput="calc2()">
+      </div>
+
+      <!-- Timeline slider -->
+      <div class="slider-row">
+        <div class="tl-header">
+          <span class="tl-label">LINHA DO TEMPO</span>
+          <div class="tl-markers">
+            <span class="tl-mark-gold">🟠 <span id="lb2-slider">Mês 24 · 2° ano</span></span>
+            <span class="tl-mark-blue">🔵 Mês 220 · 19° ano</span>
+          </div>
+        </div>
+        <input type="range" id="sl2-timeline" min="1" max="220" step="1" value="24" oninput="onTimeline()">
+        <div class="tl-scale">
+          <span>1 ano</span><span>2</span><span>3</span><span>4</span><span>5</span>
+          <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+          <span>11</span><span>12</span><span>13</span><span>14</span><span>15</span>
+          <span>16</span><span>17</span><span>18 anos</span>
+        </div>
+      </div>
+
+      <!-- Timeline chart -->
+      <div style="position:relative;height:100px;margin-bottom:8px;">
+        <canvas id="chart2-timeline"></canvas>
+      </div>
+      <div class="legend">
+        <span><span style="display:inline-block;width:24px;height:3px;background:#e9a236;border-radius:2px;"></span> Correção INCC</span>
+        <span><span style="display:inline-block;width:24px;height:3px;background:#3b82f6;border-radius:2px;"></span> Rendimento Tesouro Selic</span>
+        <span><span style="display:inline-block;width:24px;height:3px;background:#555;border-radius:2px;"></span> Após resgate</span>
+      </div>
+
+      <!-- Metrics -->
+      <div class="metrics-grid">
+        <div class="metric">
+          <div class="metric-label">VALOR INVESTIDO</div>
+          <div class="metric-value" id="m2-investido">R$ 13.943,85</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">CRÉDITO CORRIGIDO</div>
+          <div class="metric-value" id="m2-credito-corr">R$ 104.900,00</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">VALOR DE RESGATE</div>
+          <div class="metric-value" id="m2-resgate">R$ 530.114,71</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">VALOR DE VENDA</div>
+          <div class="metric-value" id="m2-venda">R$ 36.715,00</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">LUCRO LÍQUIDO</div>
+          <div class="metric-value" id="m2-lucro">R$ 22.771,15</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">LUCRO %</div>
+          <div class="metric-value" id="m2-lucro-pct" style="color:var(--gold);">163,3%</div>
+        </div>
+      </div>
+
+      <!-- Diagnostico -->
+      <div class="diagnostico" id="diagnostico" style="background:#0d1f3c;border-color:#1e3a8a;">
+        <div class="diag-icon" style="background:#1e3a8a;color:#60a5fa;">●</div>
+        <div>
+          <div class="diag-label">DIAGNÓSTICO</div>
+          <div class="diag-value" id="diag-text" style="color:#60a5fa;">ALTA RENTABILIDADE</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// SUPABASE AUTH
+// ════════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://oomyirwisvbwldqiwjvj.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_IOeM9M68uVu0pdWSTAUr1A_ugn3M2hC';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { window.location.href = 'index.html'; return; }
+  document.getElementById('user-email').textContent = session.user.email;
+})();
+
+async function logout() {
+  await sb.auth.signOut();
+  window.location.href = 'index.html';
+}
+
+// ════════════════════════════════════════════════════════
+// NAVEGAÇÃO DE TABS
+// ════════════════════════════════════════════════════════
+function showTab(n, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab' + n).classList.add('active');
+  btn.classList.add('active');
+  if (n === 2) calc2();
+}
+
+// ════════════════════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════════════════════
+const fmtBRL = (v, dec = 0) =>
+  'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+
+const fmtShort = (v) => {
+  if (v >= 1_000_000) return 'R$ ' + (v / 1_000_000).toFixed(2).replace('.', ',') + ' mi';
+  if (v >= 1_000)     return 'R$ ' + Math.round(v / 1_000) + ' mil';
+  return fmtBRL(v);
+};
+
+// ════════════════════════════════════════════════════════
+// CALCULADORA 1 — Consórcio vs Financiamento
+// ════════════════════════════════════════════════════════
+let cMonthly = null, cTotal = null;
+
+function calc1() {
+  const credito = +document.getElementById('sl1-credito').value;
+  const parcela = +document.getElementById('sl1-parcela').value;
+  const prazo   = +document.getElementById('sl1-prazo').value;
+
+  // Labels sliders
+  document.getElementById('lb1-credito').textContent = fmtBRL(credito);
+  document.getElementById('lb1-parcela').textContent = fmtBRL(parcela);
+  document.getElementById('lb1-prazo').textContent   = prazo + ' meses';
+
+  // Consórcio
+  const totalConsorcio  = parcela * prazo;
+  const taxas           = totalConsorcio - credito;
+  const taxaAdminPct    = (taxas / credito * 100).toFixed(1).replace('.', ',');
+
+  document.getElementById('lb1-taxa').textContent  = taxaAdminPct + '%';
+  document.getElementById('sum1-credito').textContent = fmtBRL(credito);
+  document.getElementById('sum1-taxas').textContent   = '+' + fmtBRL(taxas);
+  document.getElementById('sum1-total').textContent   = fmtBRL(totalConsorcio);
+
+  // Financiamento Price — 420 meses, 1% a.m.
+  const i = 0.01, n = 420;
+  const fator     = Math.pow(1 + i, n);
+  const pmtPrice  = credito * (i * fator) / (fator - 1);
+  const totPrice  = pmtPrice * n;
+
+  // Financiamento SAC — 420 meses, 1% a.m.
+  const amort    = credito / n;
+  const sacFirst = amort + credito * i;
+  const sacLast  = amort + amort * i;
+  const totSAC   = credito * (1 + i * (n + 1) / 2);
+
+  // Savings
+  const savPrice    = totPrice - totalConsorcio;
+  const savSAC      = totSAC  - totalConsorcio;
+  const savPricePct = (savPrice / totPrice * 100).toFixed(1).replace('.', ',');
+  const savSACPct   = (savSAC  / totSAC  * 100).toFixed(1).replace('.', ',');
+
+  document.getElementById('sav1-price').textContent     = fmtBRL(savPrice);
+  document.getElementById('sav1-price-pct').textContent = `economia de ${savPricePct}% no consórcio`;
+  document.getElementById('sav1-sac').textContent       = fmtBRL(savSAC);
+  document.getElementById('sav1-sac-pct').textContent   = `economia de ${savSACPct}% no consórcio`;
+
+  // Subtítulos
+  document.getElementById('sub1-monthly').textContent =
+    `Para os mesmos ${fmtBRL(credito)} de crédito em ${prazo} meses de prazo.`;
+  document.getElementById('sub1-total').textContent =
+    `Comparativo do valor total pago para os mesmos ${fmtBRL(credito)} de crédito. Price e SAC travados em 420 meses.`;
+
+  // Gráficos
+  drawMonthly(parcela, pmtPrice, sacFirst, sacLast);
+  drawTotal(totalConsorcio, totPrice, totSAC);
+}
+
+const chartDefaults = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: { legend: { display: false } },
+  scales: {
+    x: { grid: { color: '#151515' }, ticks: { color: '#666', font: { size: 11 } } },
+    y: {
+      grid: { color: '#151515' },
+      ticks: { color: '#666', font: { size: 11 }, callback: v => fmtShort(v) }
+    }
+  }
+};
+
+function drawMonthly(consorcio, price, sacFirst, sacLast) {
+  if (cMonthly) cMonthly.destroy();
+  cMonthly = new Chart(document.getElementById('chart1-monthly'), {
+    type: 'bar',
+    data: {
+      labels: ['Consórcio', 'Price', 'SAC início', 'SAC fim'],
+      datasets: [{
+        data: [consorcio, price, sacFirst, sacLast],
+        backgroundColor: ['#22c55e', '#eab308', '#f87171', '#f97316'],
+        borderRadius: 8, borderSkipped: false
+      }]
+    },
+    options: {
+      ...chartDefaults,
+      plugins: {
+        ...chartDefaults.plugins,
+        tooltip: { callbacks: { label: ctx => fmtBRL(ctx.parsed.y, 0) } }
+      }
+    }
+  });
+}
+
+function drawTotal(consorcio, price, sac) {
+  if (cTotal) cTotal.destroy();
+  cTotal = new Chart(document.getElementById('chart1-total'), {
+    type: 'bar',
+    data: {
+      labels: ['Consórcio', 'Price', 'SAC'],
+      datasets: [{
+        data: [consorcio, price, sac],
+        backgroundColor: ['#22c55e', '#eab308', '#f87171'],
+        borderRadius: 8, borderSkipped: false
+      }]
+    },
+    options: {
+      ...chartDefaults,
+      plugins: {
+        ...chartDefaults.plugins,
+        tooltip: { callbacks: { label: ctx => fmtBRL(ctx.parsed.y, 0) } }
+      }
+    }
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// CALCULADORA 2 — Simulador de Investimento
+// ════════════════════════════════════════════════════════
+let cTimeline = null;
+const PLAN_MONTHS = 220;
+
+function onTimeline() {
+  const m    = +document.getElementById('sl2-timeline').value;
+  const year = Math.ceil(m / 12);
+  const ord  = year + '°';
+  document.getElementById('lb2-slider').textContent = `Mês ${m} · ${ord} ano`;
+
+  // Atualiza fill do slider
+  const pct = ((m - 1) / (PLAN_MONTHS - 1)) * 100;
+  document.getElementById('sl2-timeline').style.background =
+    `linear-gradient(to right, #e9a236 0%, #e9a236 ${pct}%, #2a2a2a ${pct}%)`;
+
+  calc2();
+}
+
+function calc2() {
+  const credito       = +document.getElementById('in2-credito').value  || 100000;
+  const parcelaInicial= +document.getElementById('in2-parcela').value  || 567.10;
+  const inccAA        = (+document.getElementById('in2-incc').value   || 4.90) / 100;
+  const selicAM       = (+document.getElementById('in2-selic').value  || 0.83) / 100;
+  const vendaPct      = (+document.getElementById('in2-venda').value  || 35)   / 100;
+  const sliderMonth   = +document.getElementById('sl2-timeline').value || 24;
+
+  // Valor investido: soma das parcelas até sliderMonth
+  let valorInvestido = 0;
+  for (let m = 1; m <= sliderMonth; m++) {
+    const ano = Math.floor((m - 1) / 12);
+    valorInvestido += parcelaInicial * Math.pow(1 + inccAA, ano);
+  }
+
+  // Crédito corrigido pelo INCC
+  const creditoCorrigido = credito * Math.pow(1 + inccAA, sliderMonth / 12);
+
+  // Valor de venda
+  const valorVenda = creditoCorrigido * vendaPct;
+
+  // Lucro
+  const lucroLiquido = valorVenda - valorInvestido;
+  const lucroPct     = valorInvestido > 0 ? (lucroLiquido / valorInvestido * 100) : 0;
+
+  // Valor de resgate: VF de todas as parcelas investidas na Selic pelo plano completo
+  let valorResgate = 0;
+  for (let m = 1; m <= PLAN_MONTHS; m++) {
+    const ano      = Math.floor((m - 1) / 12);
+    const parc     = parcelaInicial * Math.pow(1 + inccAA, ano);
+    const mesesRest = PLAN_MONTHS - m;
+    valorResgate  += parc * Math.pow(1 + selicAM, mesesRest);
+  }
+
+  // Exibição
+  document.getElementById('m2-investido').textContent     = 'R$ ' + valorInvestido.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  document.getElementById('m2-credito-corr').textContent  = 'R$ ' + creditoCorrigido.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  document.getElementById('m2-resgate').textContent       = 'R$ ' + valorResgate.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  document.getElementById('m2-venda').textContent         = 'R$ ' + valorVenda.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  document.getElementById('m2-lucro').textContent         = 'R$ ' + lucroLiquido.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  document.getElementById('m2-lucro-pct').textContent     = lucroPct.toFixed(1).replace('.', ',') + '%';
+
+  updateDiag(lucroPct);
+  drawTimeline(credito, parcelaInicial, inccAA, selicAM, vendaPct, sliderMonth);
+}
+
+function updateDiag(pct) {
+  const el   = document.getElementById('diagnostico');
+  const text = document.getElementById('diag-text');
+  const icon = el.querySelector('.diag-icon');
+
+  let bg, border, color, label;
+  if (pct >= 100)      { bg = '#0d1f3c'; border = '#1e3a8a'; color = '#60a5fa'; label = 'ALTA RENTABILIDADE'; }
+  else if (pct >= 50)  { bg = '#0d2b1a'; border = '#166534'; color = '#4ade80'; label = 'BOA RENTABILIDADE'; }
+  else if (pct >= 20)  { bg = '#2b2000'; border = '#854d0e'; color = '#facc15'; label = 'RENTABILIDADE MODERADA'; }
+  else if (pct >= 0)   { bg = '#2b1500'; border = '#7c2d12'; color = '#fb923c'; label = 'RENTABILIDADE BAIXA'; }
+  else                 { bg = '#2b0000'; border = '#7f1d1d'; color = '#f87171'; label = 'PREJUÍZO'; }
+
+  el.style.background   = bg;
+  el.style.borderColor  = border;
+  icon.style.background = border;
+  icon.style.color      = color;
+  text.style.color      = color;
+  text.textContent      = label;
+}
+
+function drawTimeline(credito, parcelaInicial, inccAA, selicAM, vendaPct, sliderMonth) {
+  const step   = 12; // pontos a cada 12 meses
+  const labels = [];
+  const inccLine  = [];
+  const selicLine = [];
+  const postLine  = [];
+
+  let resgateVal = 0;
+  const creditoCorrigidoSlider = credito * Math.pow(1 + inccAA, sliderMonth / 12);
+  resgateVal = creditoCorrigidoSlider * vendaPct;
+
+  for (let m = step; m <= PLAN_MONTHS; m += step) {
+    labels.push('Ano ' + Math.ceil(m / 12));
+
+    // INCC: valor do crédito corrigido
+    inccLine.push(credito * Math.pow(1 + inccAA, m / 12));
+
+    // Selic: acumulado de parcelas investidas até m
+    let sAcc = 0;
+    for (let k = 1; k <= m; k++) {
+      const ano  = Math.floor((k - 1) / 12);
+      const parc = parcelaInicial * Math.pow(1 + inccAA, ano);
+      sAcc      += parc * Math.pow(1 + selicAM, m - k);
+    }
+    selicLine.push(sAcc);
+
+    // Pós-resgate: valor de venda crescendo na Selic após sliderMonth
+    if (m >= sliderMonth) {
+      const mesesDepois = m - sliderMonth;
+      postLine.push(resgateVal * Math.pow(1 + selicAM, mesesDepois));
+    } else {
+      postLine.push(null);
+    }
+  }
+
+  if (cTimeline) cTimeline.destroy();
+  cTimeline = new Chart(document.getElementById('chart2-timeline'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'INCC',   data: inccLine,  borderColor: '#e9a236', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 0, tension: 0.3 },
+        { label: 'Selic',  data: selicLine, borderColor: '#3b82f6', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 0, tension: 0.3 },
+        { label: 'Resgate',data: postLine,  borderColor: '#666',    backgroundColor: 'transparent', borderWidth: 2, pointRadius: 0, tension: 0.3, borderDash: [5, 5] }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => fmtBRL(ctx.parsed.y, 0) } } },
+      scales: {
+        x: { grid: { color: '#111' }, ticks: { color: '#444', font: { size: 9 }, maxTicksLimit: 10 } },
+        y: {
+          grid: { color: '#111' },
+          ticks: {
+            color: '#444', font: { size: 9 },
+            callback: v => v >= 1_000_000 ? 'R$' + (v/1_000_000).toFixed(1) + 'M'
+                        : v >= 1_000 ? 'R$' + Math.round(v/1_000) + 'k' : 'R$' + v
+          }
+        }
+      }
+    }
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════
+calc1();
+</script>
+</body>
+</html>
